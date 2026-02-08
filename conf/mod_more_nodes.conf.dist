@@ -1,0 +1,21 @@
+#
+# mod-more-nodes
+#
+# Increases how many times mining/herb nodes can be gathered before they despawn.
+#
+
+MoreNodes.Enable = 1
+
+# How many total gathers per node spawn (1 = default/Blizz-like).
+# Example: 5 means the node can be gathered 5 times before it disappears.
+MoreNodes.Mining.Multiplier = 5
+MoreNodes.Herbalism.Multiplier = 5
+
+# Fishing Holes (pools) can be looted multiple times; this scales that max open count.
+MoreNodes.Fishing.Multiplier = 5
+
+# Skinning is a one-time "node"; this scales the amount of items generated from skinning loot.
+MoreNodes.Skinning.Multiplier = 5
+
+# Gas extraction (spell 30427 "Extract Gas") is handled via periodic ticks; this scales how many ticks grant loot before the cloud despawns.
+MoreNodes.GasExtraction.Multiplier = 5
