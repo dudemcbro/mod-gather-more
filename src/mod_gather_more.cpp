@@ -84,29 +84,29 @@ uint32 GetConfiguredMultiplier(GatheringType type)
 }
 } // namespace
 
-class MoreNodes_WorldScript final : public WorldScript
+class GatherMore_WorldScript final : public WorldScript
 {
 public:
-    MoreNodes_WorldScript() : WorldScript("MoreNodes_WorldScript") { }
+    GatherMore_WorldScript() : WorldScript("GatherMore_WorldScript") { }
 
     void OnAfterConfigLoad(bool /*reload*/) override
     {
-        sEnabled = sConfigMgr->GetOption<bool>("MoreNodes.Enable", true);
-        sMiningMultiplier = sConfigMgr->GetOption<uint32>("MoreNodes.Mining.Multiplier", 5);
-        sHerbalismMultiplier = sConfigMgr->GetOption<uint32>("MoreNodes.Herbalism.Multiplier", 5);
-        sFishingMultiplier = sConfigMgr->GetOption<uint32>("MoreNodes.Fishing.Multiplier", 5);
-        sSkinningMultiplier = sConfigMgr->GetOption<uint32>("MoreNodes.Skinning.Multiplier", 5);
-        sGasExtractionMultiplier = sConfigMgr->GetOption<uint32>("MoreNodes.GasExtraction.Multiplier", 5);
+        sEnabled = sConfigMgr->GetOption<bool>("GatherMore.Enable", true);
+        sMiningMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.Mining.Multiplier", 3);
+        sHerbalismMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.Herbalism.Multiplier", 3);
+        sFishingMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.Fishing.Multiplier", 3);
+        sSkinningMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.Skinning.Multiplier", 3);
+        sGasExtractionMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.GasExtraction.Multiplier", 3);
 
-        LOG_INFO("module", "mod-more-nodes: Enable={}, Mining.Multiplier={}, Herbalism.Multiplier={}, Fishing.Multiplier={}, Skinning.Multiplier={}, GasExtraction.Multiplier={}",
+        LOG_INFO("module", "mod-gather-more: Enable={}, Mining.Multiplier={}, Herbalism.Multiplier={}, Fishing.Multiplier={}, Skinning.Multiplier={}, GasExtraction.Multiplier={}",
             sEnabled ? 1 : 0, sMiningMultiplier, sHerbalismMultiplier, sFishingMultiplier, sSkinningMultiplier, sGasExtractionMultiplier);
     }
 };
 
-class MoreNodes_AllGameObjectScript final : public AllGameObjectScript
+class GatherMore_AllGameObjectScript final : public AllGameObjectScript
 {
 public:
-    MoreNodes_AllGameObjectScript() : AllGameObjectScript("MoreNodes_AllGameObjectScript") { }
+    GatherMore_AllGameObjectScript() : AllGameObjectScript("GatherMore_AllGameObjectScript") { }
 
     void OnGameObjectAddWorld(GameObject* go) override
     {
@@ -175,10 +175,10 @@ public:
     }
 };
 
-class MoreNodes_AllCreatureScript final : public AllCreatureScript
+class GatherMore_AllCreatureScript final : public AllCreatureScript
 {
 public:
-    MoreNodes_AllCreatureScript() : AllCreatureScript("MoreNodes_AllCreatureScript") { }
+    GatherMore_AllCreatureScript() : AllCreatureScript("GatherMore_AllCreatureScript") { }
 
     void OnCreatureRemoveWorld(Creature* creature) override
     {
@@ -189,10 +189,10 @@ public:
     }
 };
 
-class MoreNodes_GlobalScript final : public GlobalScript
+class GatherMore_GlobalScript final : public GlobalScript
 {
 public:
-    MoreNodes_GlobalScript() : GlobalScript("MoreNodes_GlobalScript", { GLOBALHOOK_ON_AFTER_REF_COUNT }) { }
+    GatherMore_GlobalScript() : GlobalScript("GatherMore_GlobalScript", { GLOBALHOOK_ON_AFTER_REF_COUNT }) { }
 
     void OnAfterRefCount(Player const* /*player*/, LootStoreItem* /*lootStoreItem*/, Loot& loot, bool /*canRate*/, uint16 /*lootMode*/, uint32& maxcount, LootStore const& /*store*/) override
     {
@@ -218,14 +218,14 @@ public:
 };
 
 // Spell 30427 - Extract Gas (Zapthrottle Mote Extractor)
-class spell_more_nodes_extract_gas final : public SpellScriptLoader
+class spell_gather_more_extract_gas final : public SpellScriptLoader
 {
 public:
-    spell_more_nodes_extract_gas() : SpellScriptLoader("spell_more_nodes_extract_gas") { }
+    spell_gather_more_extract_gas() : SpellScriptLoader("spell_gather_more_extract_gas") { }
 
-    class spell_more_nodes_extract_gas_AuraScript final : public AuraScript
+    class spell_gather_more_extract_gas_AuraScript final : public AuraScript
     {
-        PrepareAuraScript(spell_more_nodes_extract_gas_AuraScript);
+        PrepareAuraScript(spell_gather_more_extract_gas_AuraScript);
 
         void HandlePeriodic(AuraEffect const* /*aurEff*/)
         {
@@ -274,21 +274,21 @@ public:
 
         void Register() override
         {
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_more_nodes_extract_gas_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
+            OnEffectPeriodic += AuraEffectPeriodicFn(spell_gather_more_extract_gas_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
         }
     };
 
     AuraScript* GetAuraScript() const override
     {
-        return new spell_more_nodes_extract_gas_AuraScript();
+        return new spell_gather_more_extract_gas_AuraScript();
     }
 };
 
-void Addmod_more_nodesScripts()
+void Addmod_gather_moreScripts()
 {
-    new MoreNodes_WorldScript();
-    new MoreNodes_AllGameObjectScript();
-    new MoreNodes_AllCreatureScript();
-    new MoreNodes_GlobalScript();
-    new spell_more_nodes_extract_gas();
+    new GatherMore_WorldScript();
+    new GatherMore_AllGameObjectScript();
+    new GatherMore_AllCreatureScript();
+    new GatherMore_GlobalScript();
+    new spell_gather_more_extract_gas();
 }
