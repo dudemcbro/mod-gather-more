@@ -4,7 +4,6 @@
 #include "Creature.h"
 #include "DBCStores.h"
 #include "GameObject.h"
-#include "GlobalScript.h"
 #include "Log.h"
 #include "LootMgr.h"
 #include "Player.h"
@@ -19,11 +18,11 @@
 namespace
 {
 bool sEnabled = true;
-uint32 sMiningMultiplier = 5;
-uint32 sHerbalismMultiplier = 5;
-uint32 sFishingMultiplier = 5;
-uint32 sSkinningMultiplier = 5;
-uint32 sGasExtractionMultiplier = 5;
+uint32 sMiningMultiplier = 3;
+uint32 sHerbalismMultiplier = 3;
+uint32 sFishingMultiplier = 3;
+uint32 sSkinningMultiplier = 3;
+uint32 sGasExtractionMultiplier = 3;
 
 static std::unordered_map<ObjectGuid, uint32> sFishingHoleBaseMaxOpens;
 static std::unordered_map<ObjectGuid, uint32> sGasCloudExtractionCount;
@@ -189,33 +188,6 @@ public:
     }
 };
 
-class GatherMore_GlobalScript final : public GlobalScript
-{
-public:
-    GatherMore_GlobalScript() : GlobalScript("GatherMore_GlobalScript", { GLOBALHOOK_ON_AFTER_REF_COUNT }) { }
-
-    void OnAfterRefCount(Player const* /*player*/, LootStoreItem* /*lootStoreItem*/, Loot& loot, bool /*canRate*/, uint16 /*lootMode*/, uint32& maxcount, LootStore const& /*store*/) override
-    {
-        if (!sEnabled)
-            return;
-
-        if (loot.loot_type != LOOT_SKINNING)
-            return;
-
-        uint32 multiplier = std::max<uint32>(1u, sSkinningMultiplier);
-        if (multiplier <= 1)
-            return;
-
-        if (!maxcount)
-            return;
-
-        uint64 scaled64 = uint64(maxcount) * uint64(multiplier);
-        uint32 scaled = scaled64 > std::numeric_limits<uint32>::max() ? std::numeric_limits<uint32>::max() : uint32(scaled64);
-
-        // keep within sane bounds for client/inventory
-        maxcount = std::min<uint32>(scaled, 1000u);
-    }
-};
 
 // Spell 30427 - Extract Gas (Zapthrottle Mote Extractor)
 class spell_gather_more_extract_gas final : public SpellScriptLoader
@@ -289,6 +261,5 @@ void Addmod_gather_moreScripts()
     new GatherMore_WorldScript();
     new GatherMore_AllGameObjectScript();
     new GatherMore_AllCreatureScript();
-    new GatherMore_GlobalScript();
     new spell_gather_more_extract_gas();
 }
