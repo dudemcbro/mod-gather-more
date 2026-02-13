@@ -294,7 +294,7 @@ public:
             if (skinned >= multiplier)
                 return;
 
-            PreventHitDefaultEffect();
+            PreventHitDefaultEffect(EFFECT_0);
 
             if (!creature->HasUnitFlag(UNIT_FLAG_SKINNABLE))
                 return;
