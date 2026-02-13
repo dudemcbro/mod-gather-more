@@ -1,0 +1,26 @@
+From 9198ee581e42d07c39a4acb2db70d66c68cf1ce0 Mon Sep 17 00:00:00 2001
+From: dudemcbro <79478442+dudemcbro@users.noreply.github.com>
+Date: Fri, 13 Feb 2026 15:24:20 -0500
+Subject: [PATCH] core: keep skinned corpses until skinnable flag cleared
+
+---
+ src/server/game/Entities/Creature/Creature.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/server/game/Entities/Creature/Creature.cpp b/src/server/game/Entities/Creature/Creature.cpp
+index 851bf23db..ad5d20786 100644
+--- a/src/server/game/Entities/Creature/Creature.cpp
++++ b/src/server/game/Entities/Creature/Creature.cpp
+@@ -2975,7 +2975,8 @@ void Creature::AllLootRemovedFromCorpse()
+     // corpse skinnable, but without skinning flag, and then skinned, corpse will despawn next update
+     if (loot.loot_type == LOOT_SKINNING)
+     {
+-        m_corpseRemoveTime = GameTime::GetGameTime().count();
++        if (!HasUnitFlag(UNIT_FLAG_SKINNABLE))
++            m_corpseRemoveTime = GameTime::GetGameTime().count();
+     }
+     else
+     {
+-- 
+2.43.0
+
