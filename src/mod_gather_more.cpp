@@ -26,6 +26,7 @@ uint32 sGasExtractionMultiplier = 3;
 
 static std::unordered_map<ObjectGuid, uint32> sFishingHoleBaseMaxOpens;
 static std::unordered_map<ObjectGuid, uint32> sGasCloudExtractionCount;
+static std::unordered_map<ObjectGuid, uint32> sSkinningCount;
 
 enum class GatheringType : uint8
 {
@@ -170,7 +171,10 @@ public:
         go->AddUse();
 
         if (go->GetUseCount() < multiplier)
+        {
+            go->ClearSkillupList();
             go->SetLootState(GO_READY);
+        }
     }
 };
 
@@ -185,6 +189,7 @@ public:
             return;
 
         sGasCloudExtractionCount.erase(creature->GetGUID());
+        sSkinningCount.erase(creature->GetGUID());
     }
 };
 
@@ -256,10 +261,74 @@ public:
     }
 };
 
+
+// Spell 8613 - Skinning (multi-use per corpse)
+class spell_gather_more_skinning final : public SpellScriptLoader
+{
+public:
+    spell_gather_more_skinning() : SpellScriptLoader("spell_gather_more_skinning") { }
+
+    class spell_gather_more_skinning_SpellScript final : public SpellScript
+    {
+        PrepareSpellScript(spell_gather_more_skinning_SpellScript);
+
+        void HandleHit(SpellEffIndex /*effIndex*/)
+        {
+            if (!sEnabled)
+                return;
+
+            Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
+            Creature* creature = GetHitCreature();
+            if (!player || !creature)
+                return;
+
+            uint32 multiplier = std::max<uint32>(1u, sSkinningMultiplier);
+            if (multiplier <= 1)
+                return;
+
+            uint32 lootId = creature->GetCreatureTemplate()->SkinLootId;
+            if (!lootId)
+                return;
+
+            uint32& skinned = sSkinningCount[creature->GetGUID()];
+            if (skinned >= multiplier)
+                return;
+
+            PreventHitDefaultEffect();
+
+            if (!creature->HasUnitFlag(UNIT_FLAG_SKINNABLE))
+                return;
+
+            player->AutoStoreLoot(lootId, LootTemplates_Skinning, true);
+
+            uint32 skill = creature->GetCreatureTemplate()->GetRequiredLootSkill();
+            int32 targetLevel = creature->GetLevel();
+            int32 reqValue = targetLevel < 10 ? 0 : targetLevel < 20 ? (targetLevel - 10) * 10 : targetLevel * 5;
+            int32 skillValue = player->GetPureSkillValue(skill);
+            player->UpdateGatherSkill(skill, skillValue, reqValue, creature->isElite() ? 2 : 1);
+
+            ++skinned;
+
+            if (skinned >= multiplier)
+                creature->RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
+        }
+
+        void Register() override
+        {
+            OnEffectHitTarget += SpellEffectFn(spell_gather_more_skinning_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_SKINNING);
+        }
+    };
+
+    SpellScript* GetSpellScript() const override
+    {
+        return new spell_gather_more_skinning_SpellScript();
+    }
+};
 void Addmod_gather_moreScripts()
 {
     new GatherMore_WorldScript();
     new GatherMore_AllGameObjectScript();
     new GatherMore_AllCreatureScript();
     new spell_gather_more_extract_gas();
+    new spell_gather_more_skinning();
 }
