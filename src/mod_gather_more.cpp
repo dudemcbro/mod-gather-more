@@ -7,6 +7,7 @@
 #include "Log.h"
 #include "LootMgr.h"
 #include "Player.h"
+#include "PlayerScript.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
 #include "SpellScript.h"
@@ -193,6 +194,49 @@ public:
     }
 };
 
+class GatherMore_PlayerScript final : public PlayerScript
+{
+public:
+    GatherMore_PlayerScript() : PlayerScript("GatherMore_PlayerScript") { }
+
+    void OnPlayerAfterCreatureLoot(Player* player) override
+    {
+        if (!sEnabled || !player)
+            return;
+
+        uint32 multiplier = std::max<uint32>(1u, sSkinningMultiplier);
+        if (multiplier <= 1)
+            return;
+
+        ObjectGuid lootGuid = player->GetLootGUID();
+        if (!lootGuid.IsCreatureOrVehicle())
+            return;
+
+        Creature* creature = player->GetMap()->GetCreature(lootGuid);
+        if (!creature)
+            return;
+
+        if (creature->loot.loot_type != LOOT_SKINNING)
+            return;
+
+        // Count a "skin use" once, when the last item is being looted.
+        if (creature->loot.unlootedCount != 1)
+            return;
+
+        if (!creature->GetCreatureTemplate()->SkinLootId)
+            return;
+
+        uint32& skinned = sSkinningCount[creature->GetGUID()];
+        if (skinned >= multiplier)
+            return;
+
+        ++skinned;
+
+        if (skinned < multiplier)
+            creature->SetUnitFlag(UNIT_FLAG_SKINNABLE);
+    }
+};
+
 
 // Spell 30427 - Extract Gas (Zapthrottle Mote Extractor)
 class spell_gather_more_extract_gas final : public SpellScriptLoader
@@ -272,50 +316,16 @@ public:
     {
         PrepareSpellScript(spell_gather_more_skinning_SpellScript);
 
-        void HandleHit(SpellEffIndex /*effIndex*/)
+        void HandleHit(SpellEffIndex effIndex)
         {
-            if (!sEnabled)
-                return;
-
-            Player* player = GetCaster() ? GetCaster()->ToPlayer() : nullptr;
-            Creature* creature = GetHitCreature();
-            if (!player || !creature)
-                return;
-
-            uint32 multiplier = std::max<uint32>(1u, sSkinningMultiplier);
-            if (multiplier <= 1)
-                return;
-
-            uint32 lootId = creature->GetCreatureTemplate()->SkinLootId;
-            if (!lootId)
-                return;
-
-            uint32& skinned = sSkinningCount[creature->GetGUID()];
-            if (skinned >= multiplier)
-                return;
-
-            PreventHitDefaultEffect(EFFECT_0);
-
-            if (!creature->HasUnitFlag(UNIT_FLAG_SKINNABLE))
-                return;
-
-            player->AutoStoreLoot(lootId, LootTemplates_Skinning, true);
-
-            uint32 skill = creature->GetCreatureTemplate()->GetRequiredLootSkill();
-            int32 targetLevel = creature->GetLevel();
-            int32 reqValue = targetLevel < 10 ? 0 : targetLevel < 20 ? (targetLevel - 10) * 10 : targetLevel * 5;
-            int32 skillValue = player->GetPureSkillValue(skill);
-            player->UpdateGatherSkill(skill, skillValue, reqValue, creature->isElite() ? 2 : 1);
-
-            ++skinned;
-
-            if (skinned >= multiplier)
-                creature->RemoveUnitFlag(UNIT_FLAG_SKINNABLE);
+            (void)effIndex;
         }
 
         void Register() override
         {
             OnEffectHitTarget += SpellEffectFn(spell_gather_more_skinning_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_SKINNING);
+            OnEffectHitTarget += SpellEffectFn(spell_gather_more_skinning_SpellScript::HandleHit, EFFECT_1, SPELL_EFFECT_SKINNING);
+            OnEffectHitTarget += SpellEffectFn(spell_gather_more_skinning_SpellScript::HandleHit, EFFECT_2, SPELL_EFFECT_SKINNING);
         }
     };
 
@@ -329,6 +339,7 @@ void Addmod_gather_moreScripts()
     new GatherMore_WorldScript();
     new GatherMore_AllGameObjectScript();
     new GatherMore_AllCreatureScript();
+    new GatherMore_PlayerScript();
     new spell_gather_more_extract_gas();
     new spell_gather_more_skinning();
 }
