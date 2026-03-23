@@ -14,6 +14,8 @@ GatherMore.Herbalism.Multiplier = 3
 
 # Fishing Holes (pools) can be looted multiple times; this scales that max open count.
 GatherMore.Fishing.Multiplier = 3
+# How many times UpdateFishingSkill() is called per fishing attempt (2 = double skill gain).
+GatherMore.Fishing.SkillMultiplier = 2
 # Skinning is a one-time "node"; this scales the amount of items generated from skinning loot.
 GatherMore.Skinning.Multiplier = 3
 # Gas extraction (spell 30427 "Extract Gas") is handled via periodic ticks; this scales how many ticks grant loot before the cloud despawns.

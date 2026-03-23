@@ -22,6 +22,7 @@ bool sEnabled = true;
 uint32 sMiningMultiplier = 3;
 uint32 sHerbalismMultiplier = 3;
 uint32 sFishingMultiplier = 3;
+uint32 sFishingSkillMultiplier = 2;
 uint32 sSkinningMultiplier = 3;
 uint32 sGasExtractionMultiplier = 3;
 
@@ -96,11 +97,12 @@ public:
         sMiningMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.Mining.Multiplier", 3);
         sHerbalismMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.Herbalism.Multiplier", 3);
         sFishingMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.Fishing.Multiplier", 3);
+        sFishingSkillMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.Fishing.SkillMultiplier", 2);
         sSkinningMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.Skinning.Multiplier", 3);
         sGasExtractionMultiplier = sConfigMgr->GetOption<uint32>("GatherMore.GasExtraction.Multiplier", 3);
 
-        LOG_INFO("module", "mod-gather-more: Enable={}, Mining.Multiplier={}, Herbalism.Multiplier={}, Fishing.Multiplier={}, Skinning.Multiplier={}, GasExtraction.Multiplier={}",
-            sEnabled ? 1 : 0, sMiningMultiplier, sHerbalismMultiplier, sFishingMultiplier, sSkinningMultiplier, sGasExtractionMultiplier);
+        LOG_INFO("module", "mod-gather-more: Enable={}, Mining.Multiplier={}, Herbalism.Multiplier={}, Fishing.Multiplier={}, Fishing.SkillMultiplier={}, Skinning.Multiplier={}, GasExtraction.Multiplier={}",
+            sEnabled ? 1 : 0, sMiningMultiplier, sHerbalismMultiplier, sFishingMultiplier, sFishingSkillMultiplier, sSkinningMultiplier, sGasExtractionMultiplier);
     }
 };
 
@@ -198,6 +200,21 @@ class GatherMore_PlayerScript final : public PlayerScript
 {
 public:
     GatherMore_PlayerScript() : PlayerScript("GatherMore_PlayerScript") { }
+
+    bool OnPlayerUpdateFishingSkill(Player* player, int32 /*skill*/, int32 /*zone_skill*/, int32 /*chance*/, int32 /*roll*/) override
+    {
+        if (!sEnabled || !player)
+            return true;
+
+        uint32 multiplier = std::max<uint32>(1u, sFishingSkillMultiplier);
+        if (multiplier <= 1)
+            return true;
+
+        for (uint32 i = 0; i < multiplier; ++i)
+            player->UpdateFishingSkill();
+
+        return false; // prevent the default single call
+    }
 
     void OnPlayerAfterCreatureLoot(Player* player) override
     {
