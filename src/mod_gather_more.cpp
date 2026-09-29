@@ -11,9 +11,11 @@
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
 #include "SpellScript.h"
+#include "UnitScript.h"
 
 #include <algorithm>
 #include <limits>
+#include <mutex>
 #include <unordered_map>
 
 namespace
@@ -26,6 +28,9 @@ uint32 sFishingSkillMultiplier = 2;
 uint32 sSkinningMultiplier = 3;
 uint32 sGasExtractionMultiplier = 3;
 
+// These maps are touched from map update threads (MapUpdate.Threads > 1),
+// so every access must hold sStateLock.
+static std::mutex sStateLock;
 static std::unordered_map<ObjectGuid, uint32> sFishingHoleBaseMaxOpens;
 static std::unordered_map<ObjectGuid, uint32> sGasCloudExtractionCount;
 static std::unordered_map<ObjectGuid, uint32> sSkinningCount;
@@ -138,10 +143,12 @@ public:
             if (!base)
                 base = urand(info->fishinghole.minSuccessOpens, info->fishinghole.maxSuccessOpens);
 
+            std::lock_guard<std::mutex> guard(sStateLock);
             sFishingHoleBaseMaxOpens[go->GetGUID()] = base;
         }
         else
         {
+            std::lock_guard<std::mutex> guard(sStateLock);
             auto itr = sFishingHoleBaseMaxOpens.find(go->GetGUID());
             if (itr != sFishingHoleBaseMaxOpens.end())
                 base = itr->second;
@@ -153,6 +160,15 @@ public:
         uint64 scaled64 = uint64(base) * uint64(multiplier);
         uint32 scaled = scaled64 > std::numeric_limits<uint32>::max() ? std::numeric_limits<uint32>::max() : uint32(scaled64);
         goValue->FishingHole.MaxOpens = std::max<uint32>(1u, scaled);
+    }
+
+    void OnGameObjectRemoveWorld(GameObject* go) override
+    {
+        if (!go || go->GetGoType() != GAMEOBJECT_TYPE_FISHINGHOLE)
+            return;
+
+        std::lock_guard<std::mutex> guard(sStateLock);
+        sFishingHoleBaseMaxOpens.erase(go->GetGUID());
     }
 
     void OnGameObjectLootStateChanged(GameObject* go, uint32 state, Unit* /*unit*/) override
@@ -191,8 +207,26 @@ public:
         if (!creature)
             return;
 
+        std::lock_guard<std::mutex> guard(sStateLock);
         sGasCloudExtractionCount.erase(creature->GetGUID());
         sSkinningCount.erase(creature->GetGUID());
+    }
+};
+
+// Creatures that respawn keep their GUID and are not removed from the world,
+// so reset the per-corpse skinning counter each time the creature dies.
+class GatherMore_UnitScript final : public UnitScript
+{
+public:
+    GatherMore_UnitScript() : UnitScript("GatherMore_UnitScript", true, { UNITHOOK_ON_UNIT_DEATH }) { }
+
+    void OnUnitDeath(Unit* unit, Unit* /*killer*/) override
+    {
+        if (!unit || !unit->IsCreature())
+            return;
+
+        std::lock_guard<std::mutex> guard(sStateLock);
+        sSkinningCount.erase(unit->GetGUID());
     }
 };
 
@@ -243,13 +277,18 @@ public:
         if (!creature->GetCreatureTemplate()->SkinLootId)
             return;
 
-        uint32& skinned = sSkinningCount[creature->GetGUID()];
-        if (skinned >= multiplier)
-            return;
+        bool skinAgain = false;
+        {
+            std::lock_guard<std::mutex> guard(sStateLock);
+            uint32& skinned = sSkinningCount[creature->GetGUID()];
+            if (skinned >= multiplier)
+                return;
 
-        ++skinned;
+            ++skinned;
+            skinAgain = skinned < multiplier;
+        }
 
-        if (skinned < multiplier)
+        if (skinAgain)
             creature->SetUnitFlag(UNIT_FLAG_SKINNABLE);
     }
 };
@@ -296,18 +335,25 @@ public:
             if (!lootId)
                 return;
 
-            uint32& extracted = sGasCloudExtractionCount[creature->GetGUID()];
-            if (extracted >= multiplier)
-                return;
+            bool despawn = false;
+            {
+                std::lock_guard<std::mutex> guard(sStateLock);
+                uint32& extracted = sGasCloudExtractionCount[creature->GetGUID()];
+                if (extracted >= multiplier)
+                    return;
+
+                ++extracted;
+                if (extracted >= multiplier)
+                {
+                    sGasCloudExtractionCount.erase(creature->GetGUID());
+                    despawn = true;
+                }
+            }
 
             player->AutoStoreLoot(lootId, LootTemplates_Skinning, true);
-            ++extracted;
 
-            if (extracted >= multiplier)
-            {
-                sGasCloudExtractionCount.erase(creature->GetGUID());
+            if (despawn)
                 creature->DespawnOrUnsummon();
-            }
         }
 
         void Register() override
@@ -356,6 +402,7 @@ void Addmod_gather_moreScripts()
     new GatherMore_WorldScript();
     new GatherMore_AllGameObjectScript();
     new GatherMore_AllCreatureScript();
+    new GatherMore_UnitScript();
     new GatherMore_PlayerScript();
     new spell_gather_more_extract_gas();
     new spell_gather_more_skinning();
