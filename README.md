@@ -23,8 +23,9 @@ Notes:
 
 ## Requirements
 
-- AzerothCore WotLK (developed against the
-  [mod-playerbots AzerothCore fork](https://github.com/mod-playerbots/azerothcore-wotlk)).
+- AzerothCore WotLK (3.3.5a). Developed on the
+  [mod-playerbots AzerothCore fork](https://github.com/mod-playerbots/azerothcore-wotlk)
+  (`Playerbot` branch).
 - For multi-skinning: the core patch in `patches/` (see below). Without it the
   corpse still despawns right after the first skin, so only the other features
   work.
@@ -55,7 +56,7 @@ Notes:
 
 4. Copy the config and adjust it (see below).
 
-5. Apply the SQL files (see below) and restart `worldserver`.
+5. Apply the SQL files (see [SQL](#sql)) and restart `worldserver`.
 
 ## Configuration
 
@@ -77,11 +78,14 @@ Settings are re-read on `.reload config`.
 
 ## SQL
 
-The SQL files live in `data/sql/updates/db_world/`. That is **not** a folder the
-worldserver's automatic database updater scans for modules, so apply them to
-your world database (`acore_world`) yourself, in file-name order:
+The SQL files live in `data/sql/updates/db_world/`. The worldserver's database
+updater only imports a module's `data/sql/world`, `data/sql/characters` and
+`data/sql/auth` folders, so it does **not** pick these up. Apply them to your world
+database (usually `acore_world`) yourself, in file-name order, from the module
+directory:
 
 ```sh
+cd <azerothcore>/modules/mod-gather-more
 for f in data/sql/updates/db_world/*.sql; do mysql -u <user> -p acore_world < "$f"; done
 ```
 
@@ -91,14 +95,8 @@ for f in data/sql/updates/db_world/*.sql; do mysql -u <user> -p acore_world < "$
 | `2026_02_12_01_disenchant_x3.sql` | Multiplies disenchant counts by 3. Creates a `mod_gather_more_migrations` table in the world DB so it only ever applies once. | Yes (no-op after the first run) |
 | `2026_02_13_00_skinning_multiskin.sql` | Binds `spell_gather_more_skinning` to Skinning (spell 8613). | Yes |
 
-These changes overwrite the original values and there is no rollback script.
-To undo them, restore `creature_loot_template` and `disenchant_loot_template`
-from a backup (or from AzerothCore's `data/sql/base/db_world` files), then run:
-
-```sql
-DROP TABLE IF EXISTS mod_gather_more_migrations;
-DELETE FROM spell_script_names WHERE ScriptName = 'spell_gather_more_skinning';
-```
+These changes overwrite the original values and there is no rollback script; see
+[Uninstall](#uninstall).
 
 ## Known limitations
 
@@ -113,6 +111,44 @@ DELETE FROM spell_script_names WHERE ScriptName = 'spell_gather_more_skinning';
   multiplied every time they spawn.
 - If the last skinning item cannot be looted (full bags), that attempt still
   counts as one skin.
+
+## Updating
+
+```sh
+cd <azerothcore>/modules/mod-gather-more
+git pull
+```
+
+Re-run CMake, rebuild, and apply any SQL files that are new since your last update
+(all of them can be run again safely). If `git pull` changed the core patch, reverse
+the old one first (`git apply -R` with the old file), then apply the new one.
+
+## Uninstall
+
+1. Restore `creature_loot_template` and `disenchant_loot_template` from a backup (or
+   from AzerothCore's `data/sql/base/db_world` files), then run on the world
+   database:
+
+   ```sql
+   DROP TABLE IF EXISTS mod_gather_more_migrations;
+   DELETE FROM spell_script_names WHERE ScriptName = 'spell_gather_more_skinning';
+   ```
+
+2. If you applied the core patch, remove it from the core root:
+
+   ```sh
+   git apply -R modules/mod-gather-more/patches/0001-core-keep-skinned-corpse-until-skinnable-cleared.patch
+   ```
+
+3. Delete `modules/mod-gather-more` and your server's
+   `etc/modules/mod_gather_more.conf`, re-run CMake and rebuild.
+
+## Contributing
+
+Issues and pull requests are welcome. Work on a feature branch and open the pull
+request against `main`. Commit messages follow
+[Conventional Commits](https://www.conventionalcommits.org/) (`fix: ...`,
+`feat: ...`, `docs: ...`).
 
 ## License
 
