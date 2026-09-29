@@ -173,11 +173,11 @@ public:
 
         go->AddUse();
 
+        // Note: the core keeps one skill-up per player per node until it
+        // respawns (GameObject::m_SkillupList), so repeat gathers of the
+        // same node by the same player do not grant extra skill points.
         if (go->GetUseCount() < multiplier)
-        {
-            go->ClearSkillupList();
             go->SetLootState(GO_READY);
-        }
     }
 };
 
