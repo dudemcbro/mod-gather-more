@@ -1,12 +1,14 @@
 #
 # mod-gather-more
 #
-# Increases how many times mining/herb nodes can be gathered before they despawn.
+# Lets mining/herb nodes, fishing pools and skinnable corpses be used more
+# than once. Values below 1 are treated as 1 (default/Blizzlike).
 #
 
+# Enable or disable all features of this module.
 GatherMore.Enable = 1
 
-# How many total gathers per node spawn (1 = default/Blizz-like).
+# How many total gathers per node spawn (1 = default/Blizzlike).
 # Example: 3 means the node can be gathered 3 times before it disappears.
 
 GatherMore.Mining.Multiplier = 3
@@ -16,7 +18,10 @@ GatherMore.Herbalism.Multiplier = 3
 GatherMore.Fishing.Multiplier = 3
 # How many times UpdateFishingSkill() is called per fishing attempt (2 = double skill gain).
 GatherMore.Fishing.SkillMultiplier = 2
-# Skinning is a one-time "node"; this scales the amount of items generated from skinning loot.
+# How many times a corpse can be skinned before it despawns.
+# Requires the core patch in patches/ (see README), otherwise the corpse
+# despawns after the first skin.
 GatherMore.Skinning.Multiplier = 3
-# Gas extraction (spell 30427 "Extract Gas") is handled via periodic ticks; this scales how many ticks grant loot before the cloud despawns.
+# Gas extraction (spell 30427 "Extract Gas"): how many ticks grant loot before the cloud despawns.
+# Currently inactive, see "Known limitations" in the README.
 GatherMore.GasExtraction.Multiplier = 3
