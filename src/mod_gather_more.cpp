@@ -33,6 +33,18 @@ uint32 sGasExtractionMultiplier = 3;
 static std::mutex sStateLock;
 static std::unordered_map<ObjectGuid, uint32> sFishingHoleBaseMaxOpens;
 static std::unordered_map<ObjectGuid, uint32> sGasCloudExtractionCount;
+
+// GameObject::ClearSkillupList() only exists on cores that carry the
+// skill-up reset patch. Call it when the core has it, so repeat gathers of a
+// node can grant skill-ups again; on a stock core this compiles to nothing.
+template <typename GO>
+auto ClearSkillupListIfSupported(GO* go, int) -> decltype(go->ClearSkillupList(), void())
+{
+    go->ClearSkillupList();
+}
+
+template <typename GO>
+void ClearSkillupListIfSupported(GO*, long) { }
 static std::unordered_map<ObjectGuid, uint32> sSkinningCount;
 
 enum class GatheringType : uint8
@@ -189,11 +201,13 @@ public:
 
         go->AddUse();
 
-        // Note: the core keeps one skill-up per player per node until it
-        // respawns (GameObject::m_SkillupList), so repeat gathers of the
-        // same node by the same player do not grant extra skill points.
         if (go->GetUseCount() < multiplier)
+        {
+            // On a stock core the skill-up list is kept until the node
+            // respawns, so repeat gathers grant no extra skill points.
+            ClearSkillupListIfSupported(go, 0);
             go->SetLootState(GO_READY);
+        }
     }
 };
 
