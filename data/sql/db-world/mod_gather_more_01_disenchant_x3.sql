@@ -1,4 +1,8 @@
 -- mod-gather-more: multiply disenchant loot amounts by 3 (idempotent)
+-- The multiplication runs once per world database: the marker row in
+-- mod_gather_more_migrations makes every later run a no-op. The marker
+-- name is this file's old name on purpose; do not change it, or databases
+-- that ran the old file would be multiplied again.
 
 CREATE TABLE IF NOT EXISTS mod_gather_more_migrations (
   name VARCHAR(100) NOT NULL PRIMARY KEY,

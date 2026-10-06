@@ -56,7 +56,8 @@ Notes:
 
 4. Copy the config and adjust it (see below).
 
-5. Apply the SQL files (see [SQL](#sql)) and restart `worldserver`.
+5. Restart `worldserver`. It applies the module's SQL files on start (see
+   [SQL](#sql)).
 
 ## Configuration
 
@@ -78,25 +79,31 @@ Settings are re-read on `.reload config`.
 
 ## SQL
 
-The SQL files live in `data/sql/updates/db_world/`. The worldserver's database
-updater only imports a module's `data/sql/world`, `data/sql/characters` and
-`data/sql/auth` folders, so it does **not** pick these up. Apply them to your world
-database (usually `acore_world`) yourself, in file-name order, from the module
-directory:
+The SQL files live in `data/sql/db-world/` and only change the world database.
+The worldserver's database updater applies them automatically on start when
+`Updates.EnableDatabases` in `worldserver.conf` includes the world database. It
+records each file in the world database's `updates` table and only runs a file
+again if its content changes.
+
+If the updater is turned off for the world database, apply the files yourself
+instead: run them on your world database (usually `acore_world`) in file-name
+order, from the module directory:
 
 ```sh
 cd <azerothcore>/modules/mod-gather-more
-for f in data/sql/updates/db_world/*.sql; do mysql -u <user> -p acore_world < "$f"; done
+for f in data/sql/db-world/*.sql; do mysql -u <user> -p acore_world < "$f"; done
 ```
 
 | File | What it does | Safe to re-run |
 | --- | --- | --- |
-| `2026_02_12_00_cloth_x3.sql` | Sets cloth `MinCount`/`MaxCount` to 3/10 in `creature_loot_template`. | Yes |
-| `2026_02_12_01_disenchant_x3.sql` | Multiplies disenchant counts by 3. Creates a `mod_gather_more_migrations` table in the world DB so it only ever applies once. | Yes (no-op after the first run) |
-| `2026_02_13_00_skinning_multiskin.sql` | Binds `spell_gather_more_skinning` to Skinning (spell 8613). | Yes |
+| `mod_gather_more_00_cloth_x3.sql` | Sets cloth `MinCount`/`MaxCount` to 3/10 in `creature_loot_template`. | Yes |
+| `mod_gather_more_01_disenchant_x3.sql` | Multiplies disenchant counts by 3. Creates a `mod_gather_more_migrations` table in the world DB so it only ever applies once. | Yes (no-op after the first run) |
+| `mod_gather_more_02_skinning_multiskin.sql` | Binds `spell_gather_more_skinning` to Skinning (spell 8613). | Yes |
 
 These changes overwrite the original values and there is no rollback script; see
-[Uninstall](#uninstall).
+[Uninstall](#uninstall). If you applied the SQL by hand from the old
+`data/sql/updates/db_world/` folder, see
+[Upgrading from a manual install](#upgrading-from-a-manual-install).
 
 ## Known limitations
 
@@ -111,6 +118,10 @@ These changes overwrite the original values and there is no rollback script; see
   multiplied every time they spawn.
 - If the last skinning item cannot be looted (full bags), that attempt still
   counts as one skin.
+- The cloth and disenchant SQL only changes the loot rows that exist when it
+  runs. If a later core update replaces some of those rows, they get the core's
+  values back. Running the cloth file again by hand fixes the cloth stacks; the
+  disenchant file only multiplies once per world database.
 
 ## Updating
 
@@ -119,9 +130,34 @@ cd <azerothcore>/modules/mod-gather-more
 git pull
 ```
 
-Re-run CMake, rebuild, and apply any SQL files that are new since your last update
-(all of them can be run again safely). If `git pull` changed the core patch, reverse
-the old one first (`git apply -R` with the old file), then apply the new one.
+Re-run CMake and rebuild. The worldserver applies new or changed SQL files on
+its next start (if you apply the SQL by hand, run the new files from
+`data/sql/db-world/`; all of them can be run again safely). If `git pull`
+changed the core patch, reverse the old one first (`git apply -R` with the old
+file), then apply the new one.
+
+### Upgrading from a manual install
+
+Older versions kept the SQL in `data/sql/updates/db_world/`, which the updater
+does not import, so it had to be applied by hand. After updating, the
+worldserver sees the moved files as new and runs each of them once on the next
+start. That is safe on a database that already has them: the cloth and skinning
+files write the same values again, and the disenchant file finds its row in
+`mod_gather_more_migrations` and changes nothing.
+
+To skip that run anyway (for example because you changed the cloth stacks by
+hand, or left out a file on purpose), mark the files as applied in the world
+database before you start the worldserver:
+
+```sql
+INSERT INTO updates (name, hash, state) VALUES
+('mod_gather_more_00_cloth_x3.sql', '', 'MODULE'),
+('mod_gather_more_01_disenchant_x3.sql', '', 'MODULE'),
+('mod_gather_more_02_skinning_multiskin.sql', '', 'MODULE');
+```
+
+With `Updates.AllowRehash = 1` the worldserver then fills in their hashes
+instead of running them.
 
 ## Uninstall
 
@@ -142,6 +178,16 @@ the old one first (`git apply -R` with the old file), then apply the new one.
 
 3. Delete `modules/mod-gather-more` and your server's
    `etc/modules/mod_gather_more.conf`, re-run CMake and rebuild.
+
+4. So that a later reinstall applies the SQL again, remove the module's entries
+   from the world database's `updates` table:
+
+   ```sql
+   DELETE FROM updates WHERE name IN (
+     'mod_gather_more_00_cloth_x3.sql',
+     'mod_gather_more_01_disenchant_x3.sql',
+     'mod_gather_more_02_skinning_multiskin.sql');
+   ```
 
 ## Contributing
 
