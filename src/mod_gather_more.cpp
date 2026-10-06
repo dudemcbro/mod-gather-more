@@ -307,7 +307,6 @@ public:
     }
 };
 
-
 // Spell 30427 - Extract Gas (Zapthrottle Mote Extractor)
 class spell_gather_more_extract_gas final : public SpellScriptLoader
 {
@@ -381,7 +380,6 @@ public:
         return new spell_gather_more_extract_gas_AuraScript();
     }
 };
-
 
 // Spell 8613 - Skinning (multi-use per corpse)
 class spell_gather_more_skinning final : public SpellScriptLoader
