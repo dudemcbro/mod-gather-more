@@ -79,11 +79,18 @@ Settings are re-read on `.reload config`.
 
 ## SQL
 
-The SQL files live in `data/sql/db-world/` and only change the world database.
+The SQL files live in `data/sql/world/` and only change the world database.
 The worldserver's database updater applies them automatically on start when
 `Updates.EnableDatabases` in `worldserver.conf` includes the world database. It
 records each file in the world database's `updates` table and only runs a file
 again if its content changes.
+
+The folder is called `world` rather than the skeleton module's `db-world` on
+purpose: cores built before AzerothCore's April 2026 change to module SQL
+folder matching
+([azerothcore-wotlk#25372](https://github.com/azerothcore/azerothcore-wotlk/pull/25372))
+only import folders named exactly `world`, `characters` and `auth`, and newer
+cores import both.
 
 If the updater is turned off for the world database, apply the files yourself
 instead: run them on your world database (usually `acore_world`) in file-name
@@ -91,7 +98,7 @@ order, from the module directory:
 
 ```sh
 cd <azerothcore>/modules/mod-gather-more
-for f in data/sql/db-world/*.sql; do mysql -u <user> -p acore_world < "$f"; done
+for f in data/sql/world/*.sql; do mysql -u <user> -p acore_world < "$f"; done
 ```
 
 | File | What it does | Safe to re-run |
@@ -132,7 +139,7 @@ git pull
 
 Re-run CMake and rebuild. The worldserver applies new or changed SQL files on
 its next start (if you apply the SQL by hand, run the new files from
-`data/sql/db-world/`; all of them can be run again safely). If `git pull`
+`data/sql/world/`; all of them can be run again safely). If `git pull`
 changed the core patch, reverse the old one first (`git apply -R` with the old
 file), then apply the new one.
 
