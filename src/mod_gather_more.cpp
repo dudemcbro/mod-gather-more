@@ -398,9 +398,8 @@ public:
 
         void Register() override
         {
+            // Spell 8613 has its skinning effect at index 0 only
             OnEffectHitTarget += SpellEffectFn(spell_gather_more_skinning_SpellScript::HandleHit, EFFECT_0, SPELL_EFFECT_SKINNING);
-            OnEffectHitTarget += SpellEffectFn(spell_gather_more_skinning_SpellScript::HandleHit, EFFECT_1, SPELL_EFFECT_SKINNING);
-            OnEffectHitTarget += SpellEffectFn(spell_gather_more_skinning_SpellScript::HandleHit, EFFECT_2, SPELL_EFFECT_SKINNING);
         }
     };
 
@@ -416,6 +415,7 @@ void Addmod_gather_moreScripts()
     new GatherMore_AllCreatureScript();
     new GatherMore_UnitScript();
     new GatherMore_PlayerScript();
-    new spell_gather_more_extract_gas();
+    // spell_gather_more_extract_gas stays unregistered until it is bound to
+    // spell 30427 and hooks the right aura type, see README Known limitations.
     new spell_gather_more_skinning();
 }

@@ -115,8 +115,8 @@ These changes overwrite the original values and there is no rollback script; see
 ## Known limitations
 
 - **Gas extraction is not active.** The `spell_gather_more_extract_gas` aura
-  script exists in C++, but no `spell_script_names` row binds it to spell
-  30427 and it hooks `SPELL_AURA_PERIODIC_DUMMY`, while the core handles this
+  script exists in C++ but is not registered: no `spell_script_names` row binds
+  it to spell 30427, and it hooks `SPELL_AURA_PERIODIC_DUMMY`, while the core handles this
   spell as a periodic trigger aura. Extract Gas keeps its default behavior.
 - `spell_gather_more_skinning` is an empty spell script; multi-skinning is
   handled by the player loot hook.
