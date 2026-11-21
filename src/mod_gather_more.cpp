@@ -416,6 +416,6 @@ void Addmod_gather_moreScripts()
     new GatherMore_UnitScript();
     new GatherMore_PlayerScript();
     // spell_gather_more_extract_gas stays unregistered until it is bound to
-    // spell 30427 and hooks the right aura type, see README Known limitations.
+    // spell 30427 and hooks the right aura type, see docs/known-limitations.md.
     new spell_gather_more_skinning();
 }

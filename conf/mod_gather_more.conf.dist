@@ -23,5 +23,5 @@ GatherMore.Fishing.SkillMultiplier = 2
 # despawns after the first skin.
 GatherMore.Skinning.Multiplier = 3
 # Gas extraction (spell 30427 "Extract Gas"): how many ticks grant loot before the cloud despawns.
-# Currently inactive, see "Known limitations" in the README.
+# Currently inactive, see docs/known-limitations.md.
 GatherMore.GasExtraction.Multiplier = 3
